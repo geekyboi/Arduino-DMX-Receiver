@@ -36,6 +36,7 @@
 #include <Wire.h>
 #include <SSD1306Ascii.h>
 #include <SSD1306AsciiWire.h>
+#include <avr/wdt.h>
 
 // ---------------------------------------------------------------- pins
 const uint8_t PIN_DMX_ENABLE = 3;
@@ -57,7 +58,7 @@ const unsigned long LEVEL_REFRESH_MS   = 200;
 // ---------------------------------------------------------------- settings
 const uint16_t DMX_MAX_ADDRESS = 512 - NUM_OUTPUTS + 1;  // 509: last address where all 4 fit
 const uint16_t SETTINGS_MAGIC  = 0xD4C5;
-const uint8_t  SETTINGS_VERSION = 2;
+const uint8_t  SETTINGS_VERSION = 3;
 
 enum LossMode : uint8_t { LOSS_ZERO = 0, LOSS_HOLD = 1, LOSS_MODES };
 
@@ -67,17 +68,19 @@ struct Settings {
   uint16_t address;
   uint8_t  minLevel[NUM_OUTPUTS];  // output level at DMX 0
   uint8_t  maxLevel[NUM_OUTPUTS];  // output level at DMX 255 (min > max inverts)
+  uint8_t  ledCurve[NUM_OUTPUTS];  // 0 = linear, 1 = LED curve (smoother dimming)
   uint8_t  lossMode;
   uint8_t  checksum;
 };
 
 Settings settings;
 
-// Menu items: Min/Max for each output, then "No signal", then "Reset".
+// Menu items: Min/Max for each output, Curve for each output, then "No signal", then "Reset".
 const uint8_t MENU_LEVEL_ITEMS = NUM_OUTPUTS * 2;
-const uint8_t MENU_LOSS_ITEM   = MENU_LEVEL_ITEMS;
-const uint8_t MENU_RESET_ITEM  = MENU_LEVEL_ITEMS + 1;
-const uint8_t MENU_ITEMS       = MENU_LEVEL_ITEMS + 2;
+const uint8_t MENU_CURVE_ITEMS = MENU_LEVEL_ITEMS + NUM_OUTPUTS;  // first item after the curves
+const uint8_t MENU_LOSS_ITEM   = MENU_CURVE_ITEMS;
+const uint8_t MENU_RESET_ITEM  = MENU_CURVE_ITEMS + 1;
+const uint8_t MENU_ITEMS       = MENU_CURVE_ITEMS + 2;
 const uint8_t MENU_ROWS        = 6;  // rows visible below the title
 
 // ---------------------------------------------------------------- state
@@ -123,6 +126,7 @@ void setDefaults() {
   for (uint8_t i = 0; i < NUM_OUTPUTS; i++) {
     settings.minLevel[i] = 0;
     settings.maxLevel[i] = 255;
+    settings.ledCurve[i] = 0;
   }
   settings.lossMode = LOSS_ZERO;
 }
@@ -188,7 +192,12 @@ void updateOutputs() {
   bool useDmx = connected || settings.lossMode == LOSS_HOLD;
 
   for (uint8_t i = 0; i < NUM_OUTPUTS; i++) {
-    uint8_t dmx = useDmx ? DMXSerial.read(settings.address + i) : 0;
+    if (!useDmx) {
+      levels[i] = 0;  // signal lost: output off, even if it is inverted
+      continue;
+    }
+    uint8_t dmx = DMXSerial.read(settings.address + i);
+    if (settings.ledCurve[i]) dmx = (uint16_t)dmx * dmx / 255;  // squared: finer steps at the low end
     levels[i] = scaleLevel(dmx, settings.minLevel[i], settings.maxLevel[i]);
   }
   writeOutputs(levels);
@@ -242,6 +251,10 @@ void menuLabel(uint8_t item) {
     oled.print(F("Out"));
     oled.print(item / 2 + 1);
     oled.print(item % 2 == 0 ? F(" min") : F(" max"));
+  } else if (item < MENU_CURVE_ITEMS) {
+    oled.print(F("Out"));
+    oled.print(item - MENU_LEVEL_ITEMS + 1);
+    oled.print(F(" curve"));
   } else if (item == MENU_LOSS_ITEM) {
     oled.print(F("No signal"));
   } else {
@@ -254,6 +267,8 @@ void menuValue(uint8_t item) {
   if (item < MENU_LEVEL_ITEMS) {
     uint8_t out = item / 2;
     printPadded(item % 2 == 0 ? settings.minLevel[out] : settings.maxLevel[out], 3);
+  } else if (item < MENU_CURVE_ITEMS) {
+    oled.print(settings.ledCurve[item - MENU_LEVEL_ITEMS] ? F("LED") : F("lin"));
   } else if (item == MENU_LOSS_ITEM) {
     oled.print(settings.lossMode == LOSS_HOLD ? F("hold") : F("zero"));
   }
@@ -321,6 +336,9 @@ void stepMenuValue(int8_t dir) {
     uint8_t out = menuItem / 2;
     uint8_t &v = (menuItem % 2 == 0) ? settings.minLevel[out] : settings.maxLevel[out];
     v = (uint8_t)(v + dir);  // wraps 255 <-> 0
+  } else if (menuItem < MENU_CURVE_ITEMS) {
+    uint8_t &c = settings.ledCurve[menuItem - MENU_LEVEL_ITEMS];
+    c = !c;
   } else if (menuItem == MENU_LOSS_ITEM) {
     settings.lossMode = (settings.lossMode + 1) % LOSS_MODES;
   } else {
@@ -399,6 +417,9 @@ void onDownHold() { holdRepeat(-1); }
 
 // ================================================================ setup / loop
 void setup() {
+  MCUSR = 0;      // clear the reset flags so the watchdog can be turned off
+  wdt_disable();  // in case we got here from a watchdog reset
+
   for (uint8_t i = 0; i < NUM_OUTPUTS; i++) {
     pinMode(OUTPUT_PINS[i], OUTPUT);
     analogWrite(OUTPUT_PINS[i], 0);
@@ -423,10 +444,14 @@ void setup() {
   oled.clear();
 
   lastInputMs = millis();
+
+  // Restart automatically if the loop ever hangs for more than 2 seconds.
+  wdt_enable(WDTO_2S);
 }
 
 void loop() {
   unsigned long now = millis();
+  wdt_reset();
 
   upButton.tick();
   downButton.tick();

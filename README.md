@@ -67,12 +67,13 @@ O3 128  O4 064
 |---|---|---|
 | Out*n* min | 0 | Output level when the channel is at 0 |
 | Out*n* max | 255 | Output level when the channel is at 255. Set it below min to invert the output. |
-| No signal | zero | `zero`: outputs act as if every channel were 0. `hold`: keep the last values. |
+| Out*n* curve | lin | `lin`: output follows the channel directly. `LED`: squared curve, which gives smoother fades on LEDs. |
+| No signal | zero | `zero`: all outputs switch off (even inverted ones). `hold`: keep the last values. |
 | Factory reset | | UP once to arm, UP again to confirm |
 
 Every output defaults to normal (channel at 0 = off). To invert an output, for example for a fixture that is on when its input is low, set its min to 255 and its max to 0. Each output is set up on its own, so you can mix normal and inverted outputs.
 
-While you edit a min or max value, that output shows the value live, so you can see the limit on the fixture itself. The screen switches off after 30 seconds without a button press; any button wakes it. Settings leaves itself after 30 seconds.
+While you edit a min or max value, that output shows the value live, so you can see the limit on the fixture itself. If the firmware ever hangs, a watchdog restarts it within 2 seconds. The screen switches off after 30 seconds without a button press; any button wakes it. Settings leaves itself after 30 seconds.
 
 ## Wiring the outputs
 
