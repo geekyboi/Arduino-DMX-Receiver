@@ -1,0 +1,13 @@
+Reference,Quantity,Part,Package,LCSC,Notes
+U1,1,Arduino Nano (ATmega328P),Nano module,,Sits in P8 + P10
+"P8,P10",2,Female header 1x15 2.54mm,HDR-15X1/2.54,C54104,
+U2,1,MAX481CPA RS-485 transceiver,DIP-8,,MAX485 / SN75176 pin compatible
+"U3,U6",2,Neutrik NC3 chassis XLR,Reverse mount,,NC3FAH1 female / NC3MAH male
+U4,1,Header 1x3 2.54mm,M1X3,,Optional DMX flying lead
+"Q1,Q2,Q3,Q4",4,2N3904 NPN transistor,TO-92,C2081,
+"P1,P2,P3,P4",4,Header 1x2 2.54mm,HDR-1X2/2.54,C49661,Outputs
+"SJV1,SJV2,SJV3,SJV4,SJG1,SJG2,SJG3,SJG4",8,Solder jumper,SJ_2S-NOTRACE,,Close one per channel
+"S1,S2,S3,S4",4,Tactile switch 6x6mm,TAC-SWITCH-PTH,,S3/S4 front panel only
+"D1,D2",2,0.96in I2C OLED SSD1306,4-pin module,,D2 front panel only
+"P5,P6",2,Header 1x1 2.54mm,HDR-1X1/2.54,C81276,Button break-outs
+P7,1,Female header 1x6 2.54mm,HDR-6X1/2.54,C40877,Front panel link
