@@ -36,7 +36,7 @@ The PCB design lives in EasyEDA: [Arduino Nano DMX Spinner](https://easyeda.com/
    - OneButton (Matthias Hertel)
    - SSD1306Ascii (Bill Greiman)
 3. **Upload** `firmware/DMX_Receiver/DMX_Receiver.ino` with the board set to *Arduino Nano* (*ATmega328P*, or *ATmega328P (Old Bootloader)* for most clones). Lift the Nano out of the shield first: the DMX transceiver holds the RX pin and blocks uploads.
-4. **Plug the Nano back in**, power it through VIN (7–12 V) or USB, and connect DMX.
+4. **Plug the Nano back in**, power it through VIN (12 V is what the original build used; anything from 7 to 12 V works) or USB, and connect DMX.
 
 ## Using it
 
@@ -70,6 +70,8 @@ O3 128  O4 064
 | No signal | zero | `zero`: outputs act as if every channel were 0. `hold`: keep the last values. |
 | Factory reset | | UP once to arm, UP again to confirm |
 
+Every output defaults to normal (channel at 0 = off). To invert an output, for example for a fixture that is on when its input is low, set its min to 255 and its max to 0. Each output is set up on its own, so you can mix normal and inverted outputs.
+
 While you edit a min or max value, that output shows the value live, so you can see the limit on the fixture itself. The screen switches off after 30 seconds without a button press; any button wakes it. Settings leaves itself after 30 seconds.
 
 ## Wiring the outputs
@@ -79,7 +81,9 @@ While you edit a min or max value, that output shows the value live, so you can 
 | SJG*n* closed | load − (switched) | GND | 12 V LED strip: strip + to 12 V, strip − to pin 1, PSU − to pin 2 |
 | SJV*n* closed | +5V | PWM out | PWM input on a motor or LED driver |
 
-The 2N3904 handles up to 200 mA, so for bigger loads drive a MOSFET or a driver board from the output. See the [known issues](hardware/README.md#known-issues-and-ideas-for-a-v5) before connecting heavy loads.
+> **Maximum load: 200 mA per output.** That is the limit of the 2N3904. Incandescent bulbs, motors and long LED strips draw more than this, and on the original build several transistors burned out driving the spinner light directly. For anything bigger, use the output to drive a logic-level MOSFET, a relay module or a dedicated LED/motor driver, never the load itself.
+
+See the [known issues](hardware/README.md#known-issues-and-ideas-for-a-v5) before connecting anything, in particular the missing base resistors.
 
 ## Licence
 

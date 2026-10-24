@@ -57,10 +57,12 @@ Each output has a 2N3904 NPN transistor, a 2-pin header (P1 to P4) and two solde
 
 | Mode | Close | P*n* pin 1 | P*n* pin 2 | Use for |
 |---|---|---|---|---|
-| Low-side switch (open collector) | **SJG*n*** (emitter to GND) | switched output (collector) | GND | LEDs or relays powered from their own supply, up to 200 mA and 40 V (2N3904 limits) |
+| Low-side switch (open collector) | **SJG*n*** (emitter to GND) | switched output (collector) | GND | LEDs or relays powered from their own supply, **200 mA max** and 40 V (2N3904 limits) |
 | 5 V source (emitter follower) | **SJV*n*** (collector to +5V) | +5V | output (emitter, about 4.3 V at full) | PWM or logic inputs on motor or LED drivers |
 
 Never close both jumpers on the same channel: that shorts the transistor straight across 5 V. Keep loads on the 5 V source mode small, because they come out of the Nano's regulator.
+
+The 200 mA limit is a hard one. On the original build, several 2N3904s failed driving the disco spinner directly: a lamp or motor pulls well over 200 mA (and far more at switch-on), and the missing base resistors (see known issues) meant the transistors were driven as hard as the Arduino pin could manage. Treat the outputs as control signals for a MOSFET, relay module or driver board, not as power outputs.
 
 ## Display and buttons
 
@@ -79,7 +81,9 @@ Never close both jumpers on the same channel: that shorts the transistor straigh
 
 ## Power
 
-The VIN pin of the Nano is brought out as **VCC** next to GND on the silkscreen. Feed it 7–12 V DC, or power the Nano over USB for bench testing. V2 and V3 had a separate power connector; V4 removed it.
+The VIN pin of the Nano is brought out as **VCC** next to GND on the silkscreen. The original build ran from **12 V DC**, which is the usual choice; the Nano's regulator accepts 7–12 V (20 V absolute maximum). You can also power the Nano over USB for bench testing.
+
+Everything on +5V (the Nano, MAX481, OLEDs and any SJV-mode loads) comes through the Nano's small linear regulator. At 12 V in it drops 7 V, so 100 mA on +5V already turns 0.7 W into heat. Keep the 5 V load low, or feed the board from a 7–9 V supply if you need more. V2 and V3 had a separate power connector; V4 removed it.
 
 ## Bill of materials (V4)
 
@@ -115,4 +119,5 @@ A CSV copy is in [`bom.csv`](bom.csv).
 2. **No DMX termination option.** Add a 120 Ω resistor with a solder jumper across D+/D−.
 3. **Firmware upload needs the Nano removed.** Add a jumper or a 1 kΩ resistor in series with MAX481 RO, so the USB-serial chip can win during uploads.
 4. **No input protection on the DMX lines.** A TVS diode array (e.g. SM712) across D+/D− is cheap insurance on a stage.
-5. **5 V source mode is current-limited** by the Nano's regulator. For heavier loads, switch to logic-level MOSFETs.
+5. **Outputs are too weak for real loads.** The 2N3904 tops out at 200 mA, and several failed on the original build. Use logic-level N-channel MOSFETs instead (e.g. AO3400 in SOT-23, or IRLZ44N in TO-220 for amps), each with a 100 Ω gate resistor and a 10 kΩ gate pull-down, plus a flyback diode footprint for inductive loads such as motors and relays.
+6. **5 V source mode is current-limited** by the Nano's regulator. A small buck converter from VIN to 5 V would remove the regulator heat problem at 12 V.
