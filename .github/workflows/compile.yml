@@ -1,0 +1,20 @@
+name: Compile firmware
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  compile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: arduino/compile-sketches@v1
+        with:
+          fqbn: arduino:avr:nano
+          sketch-paths: |
+            - firmware/DMX_Receiver
+          libraries: |
+            - name: DMXSerial
+            - name: OneButton
+            - name: SSD1306Ascii
