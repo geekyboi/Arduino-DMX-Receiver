@@ -183,12 +183,12 @@ void updateOutputs() {
     needsRedraw = true;
   }
 
-  if (!connected && settings.lossMode == LOSS_HOLD && screen == SCREEN_HOME) {
-    return;  // keep whatever is on the pins
-  }
+  // DMXSerial keeps the last frame it received, so "hold" just keeps reading it.
+  // This also restores the held levels after leaving the menu's output preview.
+  bool useDmx = connected || settings.lossMode == LOSS_HOLD;
 
   for (uint8_t i = 0; i < NUM_OUTPUTS; i++) {
-    uint8_t dmx = connected ? DMXSerial.read(settings.address + i) : 0;
+    uint8_t dmx = useDmx ? DMXSerial.read(settings.address + i) : 0;
     levels[i] = scaleLevel(dmx, settings.minLevel[i], settings.maxLevel[i]);
   }
   writeOutputs(levels);
@@ -310,7 +310,7 @@ void showScreen(Screen s) {
 // ================================================================ editing
 void stepAddress(int8_t dir) {
   int16_t a = (int16_t)settings.address + dir;
-  if (a > DMX_MAX_ADDRESS) a = 1;
+  if (a > (int16_t)DMX_MAX_ADDRESS) a = 1;
   if (a < 1) a = DMX_MAX_ADDRESS;
   settings.address = a;
   markChanged();
